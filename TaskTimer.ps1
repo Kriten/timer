@@ -234,18 +234,18 @@ function Reset-Task($idx) {
     Update-Row $script:rows[$idx]
 }
 
-# --- Wire events: use $this.Tag instead of closures (reliable across all PS versions) ---
+# --- Wire events: use $args[0].Tag (sender) — reliable in PS7, avoids $this ambiguity ---
 foreach ($row in $script:rows) {
 
-    # Buttons read index from $this.Tag — no closure needed
-    $row.BtnToggle.Add_Click({ Toggle-Task ([int]$this.Tag) })
-    $row.BtnReset.Add_Click({  Reset-Task  ([int]$this.Tag) })
+    # Buttons read index from sender.Tag via $args[0] — reliable in PS7
+    $row.BtnToggle.Add_Click({ Toggle-Task ([int]$args[0].Tag) })
+    $row.BtnReset.Add_Click({  Reset-Task  ([int]$args[0].Tag) })
 
     # Label double-click: show edit box (cross-ref stored in Tag hashtable)
     $row.LblName.Add_DoubleClick({
-        $tag = $this.Tag
-        $tag.TxtEdit.Text    = $this.Text
-        $this.Visible        = $false
+        $tag = $args[0].Tag
+        $tag.TxtEdit.Text    = $args[0].Text
+        $args[0].Visible     = $false
         $tag.TxtEdit.Visible = $true
         $tag.TxtEdit.Focus()
     })
@@ -253,31 +253,31 @@ foreach ($row in $script:rows) {
     # TextBox key handler: Enter = commit, Escape = cancel
     $row.TxtEdit.Add_KeyDown({
         param($s, $e)
-        $tag = $this.Tag
+        $tag = $s.Tag
         if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
-            $n = $this.Text.Trim()
+            $n = $s.Text.Trim()
             if ($n) {
                 $script:tasks[$tag.Index].Name = $n
                 $tag.LblName.Text = $n
             }
-            $this.Visible        = $false
+            $s.Visible           = $false
             $tag.LblName.Visible = $true
         }
         if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Escape) {
-            $this.Visible        = $false
+            $s.Visible           = $false
             $tag.LblName.Visible = $true
         }
     })
 
     # Commit rename when focus leaves the edit box
     $row.TxtEdit.Add_LostFocus({
-        $tag = $this.Tag
-        $n = $this.Text.Trim()
+        $tag = $args[0].Tag
+        $n = $args[0].Text.Trim()
         if ($n) {
             $script:tasks[$tag.Index].Name = $n
             $tag.LblName.Text = $n
         }
-        $this.Visible        = $false
+        $args[0].Visible     = $false
         $tag.LblName.Visible = $true
     })
 }
